@@ -17,32 +17,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --- Clone MinHook into correct directory ---
-      - name: Clone MinHook
+      # Clone MinHook before configuring CMake
+      - name: Prepare third_party and clone MinHook
+        shell: powershell
         run: |
-          if (!(Test-Path "third_party")) { mkdir third_party }
-          if (!(Test-Path "third_party/minhook")) { git clone https://github.com/TsudaKageyu/minhook.git third_party/minhook }
+          if (!(Test-Path "third_party")) {
+            New-Item -ItemType Directory -Path "third_party" | Out-Null
+          }
 
-      # --- Setup MSVC (Win32 toolchain) ---
+          if (!(Test-Path "third_party/minhook")) {
+            git clone --depth=1 https://github.com/TsudaKageyu/minhook.git third_party/minhook
+          }
+
+          if (!(Test-Path "third_party/minhook/CMakeLists.txt")) {
+            throw "MinHook clone failed or CMakeLists.txt not found in third_party/minhook"
+          }
+
       - name: Setup MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
 
-      # --- Configure CMake ---
       - name: Configure CMake
         run: cmake -S . -B build -A Win32
 
-      # --- Build DLL ---
       - name: Build DLL
         run: cmake --build build --config Release
 
-      # --- Package into ZIP ---
-      - name: Create ZIP package
+      - name: Create output folder
+        shell: powershell
         run: |
-          if (!(Test-Path "output")) { mkdir output }
-          copy build/Release/*.dll output/
-          powershell Compress-Archive -Path output/* -DestinationPath PersianTextHook.zip
+          if (!(Test-Path "output")) {
+            New-Item -ItemType Directory -Path "output" | Out-Null
+          }
+          Copy-Item "build/Release/*.dll" "output/"
 
-      # --- Create GitHub Release ---
+      - name: Create ZIP package
+        shell: powershell
+        run: |
+          Compress-Archive -Path "output/*" -DestinationPath "PersianTextHook.zip" -Force
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:

@@ -20,14 +20,14 @@ jobs:
       # --- Clone MinHook into correct directory ---
       - name: Clone MinHook
         run: |
-          mkdir third_party
+          if not exist third_party mkdir third_party
           git clone https://github.com/TsudaKageyu/minhook.git third_party/minhook
 
       # --- Setup MSVC compiler toolchain ---
       - name: Setup MSVC Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1
 
-      # --- Configure CMake for Win32 ---
+      # --- Configure CMake ---
       - name: Configure CMake
         run: cmake -S . -B build -A Win32
 
@@ -35,14 +35,14 @@ jobs:
       - name: Build DLL
         run: cmake --build build --config Release
 
-      # --- Package output into zip ---
+      # --- Package into zip ---
       - name: Create ZIP package
         run: |
-          mkdir output
+          if not exist output mkdir output
           copy build/Release/*.dll output/
           powershell Compress-Archive -Path output/* -DestinationPath PersianTextHook.zip
 
-      # --- Publish Release & Upload asset ---
+      # --- Create Release ---
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:

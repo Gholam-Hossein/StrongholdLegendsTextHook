@@ -17,20 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Clone MinHook before configuring CMake
       - name: Prepare third_party and clone MinHook
         shell: powershell
         run: |
-          if (!(Test-Path "third_party")) {
-            New-Item -ItemType Directory -Path "third_party" | Out-Null
+          New-Item -ItemType Directory -Force -Path "third_party" | Out-Null
+          if (Test-Path "third_party/minhook") {
+            Remove-Item -Recurse -Force "third_party/minhook"
           }
 
-          if (!(Test-Path "third_party/minhook")) {
-            git clone --depth=1 https://github.com/TsudaKageyu/minhook.git third_party/minhook
-          }
+          git clone --depth=1 https://github.com/TsudaKageyu/minhook.git third_party/minhook
 
           if (!(Test-Path "third_party/minhook/CMakeLists.txt")) {
-            throw "MinHook clone failed or CMakeLists.txt not found in third_party/minhook"
+            Write-Host "Contents of third_party:"
+            Get-ChildItem -Recurse third_party | Format-List
+            throw "MinHook clone failed or path is wrong"
           }
 
       - name: Setup MSVC Developer Command Prompt
@@ -42,13 +42,11 @@ jobs:
       - name: Build DLL
         run: cmake --build build --config Release
 
-      - name: Create output folder
+      - name: Prepare ZIP folder
         shell: powershell
         run: |
-          if (!(Test-Path "output")) {
-            New-Item -ItemType Directory -Path "output" | Out-Null
-          }
-          Copy-Item "build/Release/*.dll" "output/"
+          New-Item -ItemType Directory -Force -Path "output" | Out-Null
+          Copy-Item "build/Release/*.dll" "output/" -Force
 
       - name: Create ZIP package
         shell: powershell
